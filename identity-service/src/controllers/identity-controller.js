@@ -4,6 +4,7 @@ const generateTokens = require("../utils/generateToken");
 const logger = require("../utils/logger");
 const { validateRegistration, validatelogin } = require("../utils/validation");
 
+
 //user registration
 const resgiterUser = async (req, res) => {
   logger.info("Registration endpoint hit...");
@@ -50,12 +51,46 @@ const resgiterUser = async (req, res) => {
 };
 
 //user login
+const loginUser = async (req, res) => {
+  logger.info("Login endpoint hit...");
+  try{
+    const {username, password} = req.body;
+    let user = await User.findOne({username});
+    if(!user){
+      logger.warn("User not found");
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const isMatch = await user.comparePassword(password);
+    if(!isMatch){
+      logger.warn("Invalid password");
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
+    }
+    const { accessToken, refreshToken } = await generateTokens(User);
 
-
+    res.status(200).json({
+      success: true,
+      message: "User logged in successfully!",
+      accessToken,
+      refreshToken,
+    });
+  }
+  catch (e) {
+    logger.error("Login error occured", e);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }}
 //refresh token
 
 
 //logout
 
 
-module.exports = { resgiterUser,};
+module.exports = { resgiterUser, loginUser };
