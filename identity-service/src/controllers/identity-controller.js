@@ -4,8 +4,8 @@ const generateTokens = require("../utils/generateToken");
 const logger = require("../utils/logger");
 const { validateRegistration, validatelogin } = require("../utils/validation");
 
-
 //user registration
+
 const resgiterUser = async (req, res) => {
   logger.info("Registration endpoint hit...");
   try {
@@ -51,12 +51,13 @@ const resgiterUser = async (req, res) => {
 };
 
 //user login
+
 const loginUser = async (req, res) => {
   logger.info("Login endpoint hit...");
-  try{
-    const {username, password} = req.body;
-    let user = await User.findOne({username});
-    if(!user){
+  try {
+    const { username, password } = req.body;
+    let user = await User.findOne({ username });
+    if (!user) {
       logger.warn("User not found");
       return res.status(404).json({
         success: false,
@@ -64,7 +65,7 @@ const loginUser = async (req, res) => {
       });
     }
     const isMatch = await user.comparePassword(password);
-    if(!isMatch){
+    if (!isMatch) {
       logger.warn("Invalid password");
       return res.status(401).json({
         success: false,
@@ -79,18 +80,94 @@ const loginUser = async (req, res) => {
       accessToken,
       refreshToken,
     });
-  }
-  catch (e) {
+  } catch (e) {
     logger.error("Login error occured", e);
     res.status(500).json({
       success: false,
       message: "Internal server error",
     });
-  }}
+  }
+};
 //refresh token
 
+const refreshTokenUser = async (req, res) => {
+  logger.info("Refresh token endpoint hit...");
+  try {
+    const { token } = req.body;
+    if (!token) {
+      logger.warn("No refresh token provided");
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required",
+      });
+    }
+
+    const existingToken = await RefreshToken.findOne({ token });
+    if (!existingToken || existingToken.expiresAt() < new Date()) {
+      logger.warn("Invalid refresh token");
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+
+    const user = await User.findById(existingToken.user);
+    if (!user) {
+      logger.warn("User not found for the provided refresh token");
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const { accessToken, newRefreshToken } = await generateTokens(user);
+
+    // Update or create a new refresh token
+    existingToken.token = newRefreshToken;
+    existingToken.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    await existingToken.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Tokens refreshed successfully!",
+      accessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (e) {
+    logger.error("Refresh token error occurred", e);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 //logout
 
+const logoutUser = async (req, res) => {
+  logger.info("Logout endpoint hit...");
+  try {
+    const { token } = req.body;
+    if (!token) {
+      logger.warn("No refresh token provided");
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required",
+      });
+    }
+    await RefreshToken.deleteOne({ token });
+    logger.info("User logged out successfully");
+    res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (e) {
+    logger.error("Logout error occurred", e);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
-module.exports = { resgiterUser, loginUser };
+module.exports = { resgiterUser, loginUser, refreshTokenUser, logoutUser };
