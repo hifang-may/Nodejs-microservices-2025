@@ -47,7 +47,21 @@ const ceatePostLimiter = rateLimit({
 });
 
 //2.ratelimiter for get posts endpoint
-const getPostsLimiter = rateLimit({
+const getAllPostsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`Get post endpoint rate limit exceeded for IP: ${req.ip}`);
+    res.status(429).json({ success: false, message: "Too many requests" });
+  },
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+  }),
+});
+
+const getSinglePostsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
@@ -63,7 +77,8 @@ const getPostsLimiter = rateLimit({
 
 //apply this sensitiveEndpointsLimiter to our routes
 app.use("/api/posts/create-post/", ceatePostLimiter);
-app.use("/api/posts/single-post||all-posts", getPostsLimiter);
+app.use("/api/posts/single-post", getAllPostsLimiter);
+app.use("/api/posts/all-posts", getSinglePostsLimiter);
 
 //Routes
 app.use('/api/posts', (req,res,next)=>{
