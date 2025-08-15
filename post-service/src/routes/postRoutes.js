@@ -6,8 +6,9 @@ const router = express.Router();
 router.use(authenticatedRequest);
 
 router.post('/create-post', createPost);
-router.get('/single', getPost);
-router.get('/all', getAllPost);
+router.get('/single-post/:id', getPost);
+router.get('/all-posts', getAllPost);
+router.delete('/delete-post/:id', deletePost);
 
 module.exports = router;
 

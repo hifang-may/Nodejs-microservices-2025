@@ -63,7 +63,7 @@ const getPostsLimiter = rateLimit({
 
 //apply this sensitiveEndpointsLimiter to our routes
 app.use("/api/posts/create-post/", ceatePostLimiter);
-app.use("/api/posts/single||all", getPostsLimiter);
+app.use("/api/posts/single-post||all-posts", getPostsLimiter);
 
 //Routes
 app.use('/api/posts', (req,res,next)=>{
